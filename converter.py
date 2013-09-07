@@ -194,10 +194,12 @@ class Converter:
 		name, position, mass = line
 		atom1, atom2, atom3 = self.cartesian[:3]
 		pos1, pos2, pos3 = atom1[1], atom2[1], atom3[1]
+		# Create vectors pointing from one atom to the next
 		q = pos1 - position
 		r = pos2 - pos1
 		s = pos3 - pos2
 		position_u = position / np.sqrt( np.dot( position, position ) )
+		# Create unit vectors
 		q_u = q / np.sqrt( np.dot( q, q ) )
 		r_u = r / np.sqrt( np.dot( r, r ) )
 		s_u = s / np.sqrt( np.dot( s, s ) )
@@ -205,13 +207,11 @@ class Converter:
 		# Angle between a and b = acos( dot( a, b ) / ( magnitude(a) * magnitude(b) ) )
 		angle = m.acos( np.dot( -q_u, r_u ) )
 		angle_123 = m.acos( np.dot( -r_u, s_u ) )
+		# Dihedral angle = arctan2( ( q_u x r_u ) x ( r_u x s_u ), ( q_u x r_u ) . (q_u x r_u ) )
 		a = np.cross( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
 		b = np.dot( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
 		dihedral = np.arctan2( a, b )[2]
-		# cos( dihedral ) = ( e_ij x e_jk ) . ( e_jk x e_kl ) / ( sin( angle_ijk ) * sin( angle_jkl ) )
-		#print position, angle, angle_123, pos1, q, distance
-		#dihedral = m.acos( np.dot( np.cross( q_u, r_u ), np.cross( r_u, s_u ) ) /
-		#				( m.sin( angle ) * m.sin( angle_123 ) ) )
+
 		coords = [ [0, distance],[1, np.degrees( angle )],[2, np.degrees( dihedral )] ]
 		atom = [ name, coords, mass ]
 		self.zmatrix.append( atom )
@@ -226,7 +226,7 @@ class Converter:
 		return self.zmatrix
 
 	def remove_dummy_atoms( self ):
-		'''Delete any dummy atoms from the molecule'''
+		'''Delete any dummy atoms that may have been placed in the calculated cartesian coordinates'''
 		new_cartesian = []
 		for line in self.cartesian:
 			if not line[0] == 'X':
@@ -295,17 +295,14 @@ class Converter:
 
 		return 0
 	
-	def run_cartesian( self, input_file='cartesian.dat', output_file='output.dat' ):
+	def run_cartesian( self, input_file='cartesian.dat', output_file='zmatrix.dat' ):
 		'''Read in the cartesian coordinates, convert to cartesian, and output the file'''
 		self.read_cartesian( input_file )
-		self.print_cartesian()
 
 		self.cartesian_to_zmatrix()
 
 		self.output_zmatrix( output_file )
 		
 		self.print_zmatrix()
-
-		self.output_zmatrix()
 
 		return 0
