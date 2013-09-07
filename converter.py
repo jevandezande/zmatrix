@@ -177,7 +177,7 @@ class Converter:
 
 		# Third atom
 		name, position, mass = self.cartesian[2]
-		atom2, atom1 = self.cartesian[:2]
+		atom1, atom2 = self.cartesian[:2]
 		pos1, pos2 = atom1[1], atom2[1]
 		q = pos1 - position
 		r = pos2 - pos1
@@ -185,14 +185,14 @@ class Converter:
 		r_u = r / np.sqrt( np.dot( r, r ) )
 		distance = np.sqrt( np.dot( q, q ) )
 		# Angle between a and b = acos( dot product of the unit vectors )
-		angle = m.acos( np.dot( q_u, r_u ) )
-		self.zmatrix.append( [name, [ [ 0, distance ], [ 1, angle ], [] ], mass ] )
+		angle = m.acos( np.dot( -q_u, r_u ) )
+		self.zmatrix.append( [name, [ [ 0, distance ], [ 1, np.degrees( angle ) ], [] ], mass ] )
 		
 	def add_atom_to_zmatrix( self, i, line ):
 		'''Generates an atom for the zmatrix
 		(assumes that three previous atoms have been placed in the cartesian coordiantes)'''
 		name, position, mass = line
-		atom3, atom2, atom1 = self.cartesian[i-3:i]
+		atom1, atom2, atom3 = self.cartesian[:3]
 		pos1, pos2, pos3 = atom1[1], atom2[1], atom3[1]
 		q = pos1 - position
 		r = pos2 - pos1
@@ -203,14 +203,16 @@ class Converter:
 		s_u = s / np.sqrt( np.dot( s, s ) )
 		distance = np.sqrt( np.dot( q, q ) )
 		# Angle between a and b = acos( dot( a, b ) / ( magnitude(a) * magnitude(b) ) )
-		angle = m.acos( np.dot( q_u, r_u ) )
-		angle_123 = m.acos( np.dot( r_u, s_u ) )
+		angle = m.acos( np.dot( -q_u, r_u ) )
+		angle_123 = m.acos( np.dot( -r_u, s_u ) )
+		a = np.cross( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
+		b = np.dot( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
+		dihedral = np.arctan2( a, b )[2]
 		# cos( dihedral ) = ( e_ij x e_jk ) . ( e_jk x e_kl ) / ( sin( angle_ijk ) * sin( angle_jkl ) )
-		print np.degrees( angle ),  np.degrees( angle_123 )
-		self.print_zmatrix()
-		dihedral = m.acos( np.dot( np.cross( -q_u, position_u ), np.cross( r_u, s_u ) ) /
-						( m.sin( angle ) * m.sin( angle_123 ) ) )
-		coords = [ [i-3, distance],[i-2, angle],[i-1, dihedral] ]
+		#print position, angle, angle_123, pos1, q, distance
+		#dihedral = m.acos( np.dot( np.cross( q_u, r_u ), np.cross( r_u, s_u ) ) /
+		#				( m.sin( angle ) * m.sin( angle_123 ) ) )
+		coords = [ [0, distance],[1, np.degrees( angle )],[2, np.degrees( dihedral )] ]
 		atom = [ name, coords, mass ]
 		self.zmatrix.append( atom )
 
@@ -267,16 +269,15 @@ class Converter:
 			print line[0] + '\t' + '\t'.join( str(x) for x in line[1] )
 
 	def output_zmatrix( self, output_file='zmatrix.dat' ):
-		'''Output the zmatrix of the file'''
+		'''Output the zmatrix to the file'''
 		with open( output_file, 'w' ) as f:
-			f.write( str( len(self.zmatrix) ) )
-			f.write( '\n\n' )
+			f.write( '#ZMATRIX\n#\n' )
 			for line in self.zmatrix:
 				name, position, mass = line 
 				f.write( name )
 				for i in position:
-					for j in i:
-						f.write( '\t' + str(j) )
+					for j in range( 0, len(i), 2 ):
+						f.write( '\t' + str(i[j]+1) + '\t' + str(i[j+1]) )
 				f.write( '\n' )
 
 	def print_zmatrix( self ):
@@ -297,6 +298,7 @@ class Converter:
 	def run_cartesian( self, input_file='cartesian.dat', output_file='output.dat' ):
 		'''Read in the cartesian coordinates, convert to cartesian, and output the file'''
 		self.read_cartesian( input_file )
+		self.print_cartesian()
 
 		self.cartesian_to_zmatrix()
 
