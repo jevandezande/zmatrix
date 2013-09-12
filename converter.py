@@ -207,10 +207,12 @@ class Converter:
 		# Angle between a and b = acos( dot( a, b ) / ( magnitude(a) * magnitude(b) ) )
 		angle = m.acos( np.dot( -q_u, r_u ) )
 		angle_123 = m.acos( np.dot( -r_u, s_u ) )
-		# Dihedral angle = arctan2( ( q_u x r_u ) x ( r_u x s_u ), ( q_u x r_u ) . (q_u x r_u ) )
-		a = np.cross( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
-		b = np.dot( np.cross( q_u, r_u ), np.cross( r_u, s_u ) )
-		dihedral = np.arctan2( a, b )[2]
+		# Dihedral angle = acos( normal_vec1*normal_vec2 )
+		plane1 = np.cross( q, r )
+		plane2 = np.cross( r, s )
+		dihedral = m.acos( np.dot( plane1, plane2 ) / ( np.sqrt( np.dot( plane1, plane1 ) ) * np.sqrt( np.dot( plane2, plane2 ) ) ) )
+		if np.dot( np.cross( plane1, plane2 ), r_u ) < 0:
+			dihedral = -dihedral
 
 		coords = [ [0, distance],[1, np.degrees( angle )],[2, np.degrees( dihedral )] ]
 		atom = [ name, coords, mass ]
