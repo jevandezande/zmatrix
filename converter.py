@@ -304,7 +304,5 @@ class Converter:
 		self.cartesian_to_zmatrix()
 
 		self.output_zmatrix( output_file )
-		
-		self.print_zmatrix()
 
 		return 0
