@@ -19,9 +19,8 @@ class Converter:
 	def read_zmatrix( self, input_file='zmatrix.dat' ):
 		'''Read the input zmatrix file (assumes no errors and no variables)'''
 		'''The zmatrix is a list with each element formatted as follows
-		[name, [[atom1, distance],[atom2, angle],[atom3, dihedral]], mass]
-		The first three do contain all of the coordinates, and this they have empty lists for them
-		'''
+		[ name, [[ atom1, distance ], [ atom2, angle ], [ atom3, dihedral ]], mass ]
+		The first three atoms have blank lists for the undefined coordinates'''
 		self.zmatrix = []
 		with open( input_file, 'r' ) as f:
 			f.readline()
@@ -81,10 +80,11 @@ class Converter:
 						[2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]] )
 
 	def add_first_three_to_cartesian( self ):
-		'''First three atoms in the zmatrix need to be treated differently'''
+		'''The first three atoms in the zmatrix need to be treated differently'''
 		# First atom
 		name, coords, mass = self.zmatrix[0]
 		self.cartesian = [[ name, np.array( [0, 0, 0] ), mass ]]
+
 		# Second atom
 		name, coords, mass = self.zmatrix[1]
 		distance = coords[0][1]
@@ -144,7 +144,6 @@ class Converter:
 		atom = [ name, p, mass ]
 		
 		self.cartesian.append( atom )
-		
 
 	def zmatrix_to_cartesian( self ):
 		'''Convert the zmartix to cartesian coordinates'''
@@ -204,13 +203,14 @@ class Converter:
 		r_u = r / np.sqrt( np.dot( r, r ) )
 		s_u = s / np.sqrt( np.dot( s, s ) )
 		distance = np.sqrt( np.dot( q, q ) )
-		# Angle between a and b = acos( dot( a, b ) / ( magnitude(a) * magnitude(b) ) )
+		# Angle between a and b = acos( dot( a, b ) / ( |a| |b| ) )
 		angle = m.acos( np.dot( -q_u, r_u ) )
 		angle_123 = m.acos( np.dot( -r_u, s_u ) )
-		# Dihedral angle = acos( normal_vec1*normal_vec2 )
+		# Dihedral angle = acos( dot( normal_vec1, normal_vec2 ) / ( |normal_vec1| |normal_vec2| ) )
 		plane1 = np.cross( q, r )
 		plane2 = np.cross( r, s )
 		dihedral = m.acos( np.dot( plane1, plane2 ) / ( np.sqrt( np.dot( plane1, plane1 ) ) * np.sqrt( np.dot( plane2, plane2 ) ) ) )
+		# Convert to signed dihedral angle
 		if np.dot( np.cross( plane1, plane2 ), r_u ) < 0:
 			dihedral = -dihedral
 
