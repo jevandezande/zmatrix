@@ -82,8 +82,7 @@ class Converter:
         a = np.cos(angle / 2)
         b, c, d = -axis * np.sin(angle / 2)
         return np.array([[a * a + b * b - c * c - d * d, 2 * (b * c - a * d), 2 * (b * d + a * c)],
-                         [2 * (b * c + a * d), a * a + c * c -
-                          b * b - d * d, 2 * (c * d - a * b)],
+                         [2 * (b * c + a * d), a * a + c * c -b * b - d * d,  2 * (c * d - a * b)],
                          [2 * (b * d - a * c), 2 * (c * d + a * b), a * a + d * d - b * b - c * c]])
 
     def add_first_three_to_cartesian(self):
@@ -158,8 +157,8 @@ class Converter:
         # Deal with first three line separately
         self.add_first_three_to_cartesian()
 
-        for i in range(3, len(self.zmatrix)):
-            self.add_atom_to_cartesian(self.zmatrix[i])
+        for atom in self.zmatrix[3:]:
+            self.add_atom_to_cartesian(atom)
 
         self.remove_dummy_atoms()
 
@@ -233,9 +232,8 @@ class Converter:
     def cartesian_to_zmatrix(self):
         '''Convert the cartesian coordinates to a zmatrix'''
         self.add_first_three_to_zmatrix()
-        for i in range(3, len(self.cartesian)):
-            line = self.cartesian[i]
-            self.add_atom_to_zmatrix(i, line)
+        for i, atom in enumerate(self.cartesian[3:], start=3):
+            self.add_atom_to_zmatrix(i, atom)
 
         return self.zmatrix
 
