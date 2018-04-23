@@ -308,12 +308,8 @@ class Converter:
         self.zmatrix_to_cartesian()
         self.output_cartesian(output_file)
 
-        return 0
-
     def run_cartesian(self, input_file='cartesian.dat', output_file='zmatrix.dat'):
         """Read in the cartesian coordinates, convert to cartesian, and output the file"""
         self.read_cartesian(input_file)
         self.cartesian_to_zmatrix()
         self.output_zmatrix(output_file)
-
-        return 0
