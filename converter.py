@@ -1,6 +1,6 @@
-'''
+"""
 A module for converting between zmatrices and cartesian coordinates
-'''
+"""
 
 import math as m
 import numpy as np
@@ -9,7 +9,7 @@ VERBOSE = True
 
 
 class Converter:
-    '''A coordinate converter class'''
+    """A coordinate converter class"""
 
     def __init__(self):
         # Dictionary of the masses of elements indexed by element name;
@@ -21,10 +21,12 @@ class Converter:
         self.zmatrix = []
 
     def read_zmatrix(self, input_file='zmatrix.dat'):
-        '''Read the input zmatrix file (assumes no errors and no variables)'''
-        '''The zmatrix is a list with each element formatted as follows
-		[ name, [[ atom1, distance ], [ atom2, angle ], [ atom3, dihedral ]], mass ]
-		The first three atoms have blank lists for the undefined coordinates'''
+        """
+        Read the input zmatrix file (assumes no errors and no variables)
+        The zmatrix is a list with each element formatted as follows
+        [ name, [[ atom1, distance ], [ atom2, angle ], [ atom3, dihedral ]], mass ]
+        The first three atoms have blank lists for the undefined coordinates
+        """
         self.zmatrix = []
         with open(input_file, 'r') as f:
             f.readline()
@@ -42,8 +44,7 @@ class Converter:
                                  self.masses[name]])
             for line in f.readlines():
                 # Get the components of each line, dropping anything extra
-                name, atom1, distance, atom2, angle, atom3, dihedral = line.split()[
-                    :7]
+                name, atom1, distance, atom2, angle, atom3, dihedral = line.split()[:7]
                 # convert to a base 0 indexing system and use radians
                 atom = [name,
                         [[int(atom1) - 1, float(distance)],
@@ -55,38 +56,41 @@ class Converter:
         return self.zmatrix
 
     def read_cartesian(self, input_file='cartesian.dat'):
-        '''Read the cartesian coordinates file (assumes no errors)'''
-        '''The cartesian coordiantes consist of a list of atoms formatted as follows
-		[ name, np.array( [ x, y, z ] ), mass ]
-		'''
+        """
+        Read the cartesian coordinates file (assumes no errors)
+        The cartesian coordiantes consist of a list of atoms formatted as follows
+        [ name, np.array( [ x, y, z ] ), mass ]
+        """
         self.cartesian = []
         with open(input_file, 'r') as f:
             # Throw away the first two lines
             f.readline()
             f.readline()
             for line in f.readlines():
-                coords = line.split()
-                name = coords[0]
-                position = []
-                for i in coords[1:4]:
-                    position.append(float(i))
+                name, x, y, z = line.split()
                 self.cartesian.append(
-                    [name, np.array(position), self.masses[name]])
+                    [name,
+                     np.array([x, y, z], dtype='f8'),
+                     self.masses[name]])
 
         return self.cartesian
 
     def rotation_matrix(self, axis, angle):
-        '''Euler-Rodrigues formula for rotation matrix'''
+        """
+        Euler-Rodrigues formula for rotation matrix
+        """
         # Normalize the axis
         axis = axis / np.sqrt(np.dot(axis, axis))
         a = np.cos(angle / 2)
         b, c, d = -axis * np.sin(angle / 2)
         return np.array([[a * a + b * b - c * c - d * d, 2 * (b * c - a * d), 2 * (b * d + a * c)],
-                         [2 * (b * c + a * d), a * a + c * c -b * b - d * d,  2 * (c * d - a * b)],
+                         [2 * (b * c + a * d), a * a + c * c - b * b - d * d, 2 * (c * d - a * b)],
                          [2 * (b * d - a * c), 2 * (c * d + a * b), a * a + d * d - b * b - c * c]])
 
     def add_first_three_to_cartesian(self):
-        '''The first three atoms in the zmatrix need to be treated differently'''
+        """
+        The first three atoms in the zmatrix need to be treated differently
+        """
         # First atom
         name, coords, mass = self.zmatrix[0]
         self.cartesian = [[name, np.array([0, 0, 0]), mass]]
@@ -120,7 +124,7 @@ class Converter:
         self.cartesian.append(atom)
 
     def add_atom_to_cartesian(self, coords):
-        '''Find the cartesian coordinates of the atom'''
+        """Find the cartesian coordinates of the atom"""
         name, coords, mass = coords
         atom1, distance = coords[0]
         atom2, angle = coords[1]
@@ -153,7 +157,9 @@ class Converter:
         self.cartesian.append(atom)
 
     def zmatrix_to_cartesian(self):
-        '''Convert the zmartix to cartesian coordinates'''
+        """
+        Convert the zmartix to cartesian coordinates
+        """
         # Deal with first three line separately
         self.add_first_three_to_cartesian()
 
@@ -167,37 +173,39 @@ class Converter:
         return self.cartesian
 
     def add_first_three_to_zmatrix(self):
-        '''The first three atoms need to be treated differently'''
+        """The first three atoms need to be treated differently"""
         # First atom
         self.zmatrix = []
         name, position, mass = self.cartesian[0]
         self.zmatrix.append([name, [[], [], []], mass])
 
         # Second atom
-        name, position, mass = self.cartesian[1]
-        atom1 = self.cartesian[0]
-        pos1 = atom1[1]
-        q = pos1 - position
-        distance = m.sqrt(np.dot(q, q))
-        self.zmatrix.append([name, [[0, distance], [], []], mass])
+        if len(self.cartesian) > 1:
+            name, position, mass = self.cartesian[1]
+            atom1 = self.cartesian[0]
+            pos1 = atom1[1]
+            q = pos1 - position
+            distance = m.sqrt(np.dot(q, q))
+            self.zmatrix.append([name, [[0, distance], [], []], mass])
 
         # Third atom
-        name, position, mass = self.cartesian[2]
-        atom1, atom2 = self.cartesian[:2]
-        pos1, pos2 = atom1[1], atom2[1]
-        q = pos1 - position
-        r = pos2 - pos1
-        q_u = q / np.sqrt(np.dot(q, q))
-        r_u = r / np.sqrt(np.dot(r, r))
-        distance = np.sqrt(np.dot(q, q))
-        # Angle between a and b = acos( dot product of the unit vectors )
-        angle = m.acos(np.dot(-q_u, r_u))
-        self.zmatrix.append(
-            [name, [[0, distance], [1, np.degrees(angle)], []], mass])
+        if len(self.cartesian) > 2:
+            name, position, mass = self.cartesian[2]
+            atom1, atom2 = self.cartesian[:2]
+            pos1, pos2 = atom1[1], atom2[1]
+            q = pos1 - position
+            r = pos2 - pos1
+            q_u = q / np.sqrt(np.dot(q, q))
+            r_u = r / np.sqrt(np.dot(r, r))
+            distance = np.sqrt(np.dot(q, q))
+            # Angle between a and b = acos( dot product of the unit vectors )
+            angle = m.acos(np.dot(-q_u, r_u))
+            self.zmatrix.append(
+                [name, [[0, distance], [1, np.degrees(angle)], []], mass])
 
     def add_atom_to_zmatrix(self, i, line):
-        '''Generates an atom for the zmatrix
-        (assumes that three previous atoms have been placed in the cartesian coordiantes)'''
+        """Generates an atom for the zmatrix
+        (assumes that three previous atoms have been placed in the cartesian coordiantes)"""
         name, position, mass = line
         atom1, atom2, atom3 = self.cartesian[:3]
         pos1, pos2, pos3 = atom1[1], atom2[1], atom3[1]
@@ -230,7 +238,7 @@ class Converter:
         self.zmatrix.append(atom)
 
     def cartesian_to_zmatrix(self):
-        '''Convert the cartesian coordinates to a zmatrix'''
+        """Convert the cartesian coordinates to a zmatrix"""
         self.add_first_three_to_zmatrix()
         for i, atom in enumerate(self.cartesian[3:], start=3):
             self.add_atom_to_zmatrix(i, atom)
@@ -238,7 +246,7 @@ class Converter:
         return self.zmatrix
 
     def remove_dummy_atoms(self):
-        '''Delete any dummy atoms that may have been placed in the calculated cartesian coordinates'''
+        """Delete any dummy atoms that may have been placed in the calculated cartesian coordinates"""
         new_cartesian = []
         for line in self.cartesian:
             if not line[0] == 'X':
@@ -246,7 +254,7 @@ class Converter:
         self.cartesian = new_cartesian
 
     def center_cartesian(self):
-        '''Find the center of mass and move it to the origin'''
+        """Find the center of mass and move it to the origin"""
         self.total_mass = 0.0
         center_of_mass = np.array([0.0, 0.0, 0.0])
         for atom in self.cartesian:
@@ -265,7 +273,7 @@ class Converter:
             atom[1][2][1] = np.degrees(atom[1][2][1])
 
     def output_cartesian(self, output_file='cartesian.dat'):
-        '''Output the cartesian coordinates of the file'''
+        """Output the cartesian coordinates of the file"""
         with open(output_file, 'w') as f:
             f.write(str(len(self.cartesian)))
             f.write('\n\n')
@@ -276,12 +284,12 @@ class Converter:
                 f.write('\n')
 
     def print_cartesian(self):
-        '''Print the cartesian coordinates'''
+        """Print the cartesian coordinates"""
         for line in self.cartesian:
             print(line[0] + '\t' + '\t'.join(str(x) for x in line[1]))
 
     def output_zmatrix(self, output_file='zmatrix.dat'):
-        '''Output the zmatrix to the file'''
+        """Output the zmatrix to the file"""
         with open(output_file, 'w') as f:
             f.write('#ZMATRIX\n#\n')
             for line in self.zmatrix:
@@ -292,27 +300,25 @@ class Converter:
                         f.write('\t' + str(i[j] + 1) + '\t' + str(i[j + 1]))
                 f.write('\n')
 
-    def print_zmatrix(self):
-        '''Print the zmatrix'''
+    def str_zmatrix(self):
+        """Print the zmatrix"""
+        out = ''
         for line in self.zmatrix:
-            print(line[0] + '\t' + '\t'.join(str(x) for x in line[1]))
+            out += f'{line[0]}\t' + '\t'.join(str(x) for x in line[1])
+        return out
 
     def run_zmatrix(self, input_file='zmatrix.dat', output_file='cartesian.dat'):
-        '''Read in the zmatrix, converts it to cartesian, and outputs it to a file'''
+        """Read in the zmatrix, converts it to cartesian, and outputs it to a file"""
         self.read_zmatrix(input_file)
-
         self.zmatrix_to_cartesian()
-
         self.output_cartesian(output_file)
 
         return 0
 
     def run_cartesian(self, input_file='cartesian.dat', output_file='zmatrix.dat'):
-        '''Read in the cartesian coordinates, convert to cartesian, and output the file'''
+        """Read in the cartesian coordinates, convert to cartesian, and output the file"""
         self.read_cartesian(input_file)
-
         self.cartesian_to_zmatrix()
-
         self.output_zmatrix(output_file)
 
         return 0
