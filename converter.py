@@ -2,7 +2,6 @@
 A module for converting between zmatrices and cartesian coordinates
 """
 
-import math as m
 import numpy as np
 
 VERBOSE = True
@@ -40,7 +39,7 @@ class Converter:
             name, atom1, distance, atom2, angle = f.readline().split()[:5]
             self.zmatrix.append([name,
                                  [[int(atom1) - 1, float(distance)],
-                                  [int(atom2) - 1, m.radians(float(angle))], []],
+                                  [int(atom2) - 1, np.radians(float(angle))], []],
                                  self.masses[name]])
             for line in f.readlines():
                 # Get the components of each line, dropping anything extra
@@ -48,8 +47,8 @@ class Converter:
                 # convert to a base 0 indexing system and use radians
                 atom = [name,
                         [[int(atom1) - 1, float(distance)],
-                         [int(atom2) - 1, m.radians(float(angle))],
-                         [int(atom3) - 1, m.radians(float(dihedral))]],
+                         [int(atom2) - 1, np.radians(float(angle))],
+                         [int(atom3) - 1, np.radians(float(dihedral))]],
                         self.masses[name]]
                 self.zmatrix.append(atom)
 
@@ -142,9 +141,9 @@ class Converter:
         # Vector of length distance pointing from q to r
         d = distance * a / np.sqrt(np.dot(a, a))
 
-        # Vector normal to plane defined by q,r,s
+        # Vector normal to plane defined by q, r, s
         normal = np.cross(a, b)
-        # Rotate d by the angle around the normal to the plane defined by q,r,s
+        # Rotate d by the angle around the normal to the plane defined by q, r, s
         d = np.dot(self.rotation_matrix(normal, angle), d)
 
         # Rotate d around a by the dihedral
@@ -185,7 +184,7 @@ class Converter:
             atom1 = self.cartesian[0]
             pos1 = atom1[1]
             q = pos1 - position
-            distance = m.sqrt(np.dot(q, q))
+            distance = np.sqrt(np.dot(q, q))
             self.zmatrix.append([name, [[0, distance], [], []], mass])
 
         # Third atom
@@ -198,8 +197,8 @@ class Converter:
             q_u = q / np.sqrt(np.dot(q, q))
             r_u = r / np.sqrt(np.dot(r, r))
             distance = np.sqrt(np.dot(q, q))
-            # Angle between a and b = acos( dot product of the unit vectors )
-            angle = m.acos(np.dot(-q_u, r_u))
+            # Angle between a and b = acos(dot(a, b)) / (|a| |b|))
+            angle = np.arccos(np.dot(-q_u, r_u))
             self.zmatrix.append(
                 [name, [[0, distance], [1, np.degrees(angle)], []], mass])
 
@@ -219,14 +218,14 @@ class Converter:
         r_u = r / np.sqrt(np.dot(r, r))
         s_u = s / np.sqrt(np.dot(s, s))
         distance = np.sqrt(np.dot(q, q))
-        # Angle between a and b = acos( dot( a, b ) / ( |a| |b| ) )
-        angle = m.acos(np.dot(-q_u, r_u))
-        angle_123 = m.acos(np.dot(-r_u, s_u))
-        # Dihedral angle = acos( dot( normal_vec1, normal_vec2 ) / (
-        # |normal_vec1| |normal_vec2| ) )
+        # Angle between a and b = acos(dot(a, b)) / (|a| |b|))
+        angle = np.arccos(np.dot(-q_u, r_u))
+        angle_123 = np.arccos(np.dot(-r_u, s_u))
+        # Dihedral angle =
+        #   acos(dot(normal_vec1, normal_vec2)) / (|normal_vec1| |normal_vec2|))
         plane1 = np.cross(q, r)
         plane2 = np.cross(r, s)
-        dihedral = m.acos(np.dot(
+        dihedral = np.arccos(np.dot(
             plane1, plane2) / (np.sqrt(np.dot(plane1, plane1)) * np.sqrt(np.dot(plane2, plane2))))
         # Convert to signed dihedral angle
         if np.dot(np.cross(plane1, plane2), r_u) < 0:
