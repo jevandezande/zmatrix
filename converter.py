@@ -93,21 +93,21 @@ class Converter:
         """
         # First atom
         name, coords, mass = self.zmatrix[0]
-        self.cartesian = [[name, np.array([0, 0, 0]), mass]]
+        self.cartesian = [[name, np.array([0., 0., 0.]), mass]]
 
         # Second atom
         name, coords, mass = self.zmatrix[1]
         distance = coords[0][1]
         self.cartesian.append(
-            [name, np.array([distance, 0, 0]), self.masses[name]])
+            [name, np.array([distance, 0., 0.]), self.masses[name]])
 
         # Third atom
         name, coords, mass = self.zmatrix[2]
         atom1, atom2 = coords[:2]
         atom1, distance = atom1
         atom2, angle = atom2
-        q = np.array(self.cartesian[atom1][1])  # position of atom 1
-        r = np.array(self.cartesian[atom2][1])  # position of atom 2
+        q = np.array(self.cartesian[atom1][1], dtype='f8')  # position of atom 1
+        r = np.array(self.cartesian[atom2][1], dtype='f8')  # position of atom 2
 
         # Vector pointing from q to r
         a = r - q
@@ -248,24 +248,23 @@ class Converter:
     def remove_dummy_atoms(self):
         """Delete any dummy atoms that may have been placed in the calculated cartesian coordinates"""
         new_cartesian = []
-        for line in self.cartesian:
-            if not line[0] == 'X':
-                new_cartesian.append(line)
+        for atom, xyz, mass in self.cartesian:
+            if not atom == 'X':
+                new_cartesian.append((atom, xyz, mass))
         self.cartesian = new_cartesian
 
     def center_cartesian(self):
         """Find the center of mass and move it to the origin"""
         self.total_mass = 0.0
         center_of_mass = np.array([0.0, 0.0, 0.0])
-        for atom in self.cartesian:
-            mass = atom[2]
+        for atom, xyz, mass in self.cartesian:
             self.total_mass += mass
-            center_of_mass += atom[1] * mass
-        center_of_mass = center_of_mass / float(self.total_mass)
+            center_of_mass += xyz * mass
+        center_of_mass = center_of_mass / self.total_mass
 
         # Translate each atom by the center of mass
-        for atom in self.cartesian:
-            atom[1] = atom[1] - center_of_mass
+        for atom, xyz, mass in self.cartesian:
+            xyz -= center_of_mass
 
     def cartesian_radians_to_degrees(self):
         for atom in self.cartesian:
@@ -275,36 +274,33 @@ class Converter:
     def output_cartesian(self, output_file='cartesian.dat'):
         """Output the cartesian coordinates of the file"""
         with open(output_file, 'w') as f:
-            f.write(str(len(self.cartesian)))
-            f.write('\n\n')
-            for line in self.cartesian:
-                name, position, mass = line
-                f.write(name + '\t')
-                f.write('\t'.join(str(x) for x in position))
-                f.write('\n')
+            f.write(f'{len(self.cartesian)}\n\n')
+            f.write(self.str_cartesian())
 
-    def print_cartesian(self):
+    def str_cartesian(self):
         """Print the cartesian coordinates"""
-        for line in self.cartesian:
-            print(line[0] + '\t' + '\t'.join(str(x) for x in line[1]))
+        out = ''
+        for atom, (x, y, z), masses in self.cartesian:
+            out += f'{atom:<2s} {x:>15.10f} {y:>15.10f} {z:>15.10f}\n'
+
+        return out
 
     def output_zmatrix(self, output_file='zmatrix.dat'):
         """Output the zmatrix to the file"""
         with open(output_file, 'w') as f:
             f.write('#ZMATRIX\n#\n')
-            for line in self.zmatrix:
-                name, position, mass = line
-                f.write(name)
-                for i in position:
-                    for j in range(0, len(i), 2):
-                        f.write('\t' + str(i[j] + 1) + '\t' + str(i[j + 1]))
-                f.write('\n')
+            f.write(self.str_zmatrix())
 
     def str_zmatrix(self):
         """Print the zmatrix"""
-        out = ''
-        for line in self.zmatrix:
-            out += f'{line[0]}\t' + '\t'.join(str(x) for x in line[1])
+        out = f'{self.zmatrix[0][0]}\n'
+        for atom, position, mass in self.zmatrix[1:]:
+            out += f'{atom:<2s}'
+            for i in position:
+                for j in range(0, len(i), 2):
+                    out += f' {i[j] + 1:>3d} {i[j + 1]:>15.10f}'
+            out += '\n'
+
         return out
 
     def run_zmatrix(self, input_file='zmatrix.dat', output_file='cartesian.dat'):
