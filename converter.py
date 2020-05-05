@@ -28,20 +28,21 @@ class Converter:
         """
         self.zmatrix = []
         with open(input_file, 'r') as f:
-            f.readline()
-            f.readline()
-            name = f.readline().strip()
+            next(f)
+            next(f)
+
+            name = next(f).strip()
             self.zmatrix.append([name, [], self.masses[name]])
-            name, atom1, distance = f.readline().split()[:3]
+            name, atom1, distance = next(f).split()[:3]
             self.zmatrix.append([name,
                                  [[int(atom1) - 1, float(distance)], [], []],
                                  self.masses[name]])
-            name, atom1, distance, atom2, angle = f.readline().split()[:5]
+            name, atom1, distance, atom2, angle = next(f).split()[:5]
             self.zmatrix.append([name,
                                  [[int(atom1) - 1, float(distance)],
                                   [int(atom2) - 1, np.radians(float(angle))], []],
                                  self.masses[name]])
-            for line in f.readlines():
+            for line in f:
                 # Get the components of each line, dropping anything extra
                 name, atom1, distance, atom2, angle, atom3, dihedral = line.split()[:7]
                 # convert to a base 0 indexing system and use radians
@@ -63,9 +64,9 @@ class Converter:
         self.cartesian = []
         with open(input_file, 'r') as f:
             # Throw away the first two lines
-            f.readline()
-            f.readline()
-            for line in f.readlines():
+            next(f)
+            next(f)
+            for line in f:
                 name, x, y, z = line.split()
                 self.cartesian.append(
                     [name,
